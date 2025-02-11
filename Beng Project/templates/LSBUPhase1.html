@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Skills and Contact Info</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<!--Purpose section -->
+    <!--
+    
+    <div id="purposeSection">
+        <h2>What would you like to use the CV Analysis for?</h2>
+        <form id="purposeForm">
+            <label>
+                <input type="radio" name="purpose" value="games" required> PHASE 1 
+            </label><br>
+            <label>
+            
+           
+                <input type="radio" name="purpose" value="single_jd"> For single JD analysis and get best applicants
+            </label><br>
+            <label>
+                <input type="radio" name="purpose" value="multiple_jds"> multiple JD upload
+            </label><br><br>
+        
+            <input type="submit" value="Submit">
+                
+        </form>
+    </div>
+-->
+
+
+<!-- Job Title Input Section -->
+<div id="jobTitleSection" style="display: none;">
+    <h2>Type Your Job Title</h2>
+    <input type="text" id="jobTitleInput" placeholder="Start typing your job title..." autocomplete="off">
+    <ul id="jobSuggestions" style="list-style-type:none;"></ul>
+</div>
+
+<!-- CV Upload Form Section -->
+<form id="cvUploadForm" method="POST" enctype="multipart/form-data" style="display:none;">
+    <h2>Edit your skills:</h2>
+    <label for="file">Upload your CV:</label>
+    <input type="file" name="file" id="file" required>
+    <input type="submit" value="Upload CV">
+</form>
+
+<!-- Section to display the PDF, skills, experience, and contact info -->
+<div id="skillsSection" style="display: none;">
+    <iframe id="pdfViewer" style="width:100%;height:500px;"></iframe> <!-- PDF Viewer -->
+
+    <!-- Contact Info Form -->
+    <form id="contactInfoForm" method="POST">
+        <h3>Edit Contact Information</h3>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required><br>
+        <label for="phone">Phone:</label>
+        <input type="text" id="phone" name="phone" required><br>
+    </form>
+
+    <!-- Skills and Experience Form -->
+    <form id="skillsForm" method="POST">
+        <p>Select skills to keep (uncheck to remove skills):</p>
+        <ul id="skillsList"></ul>
+        
+        <label for="experience">How many years of experience do you have in this field?</label>
+        <input type="number" id="experience" name="experience" min="0" required><br><br>
+
+        <input type="hidden" name="cv_text" id="cv_text">
+        <input type="submit" value="Save All">
+    </form>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Show CV upload form and job title section by default
+        $('#cvUploadForm').show();  
+        $('#jobTitleSection').show();  
+    
+        // Hide the purpose section (if it's still in the code or temporarily commented out)
+        $('#purposeSection').hide();
+    
+        // Handle input for job title
+        $('#jobTitleInput').on('input', function() {
+            var jobTitle = $(this).val();
+            if (jobTitle.length > 2) {  // Start fetching suggestions after 3 characters
+                $.ajax({
+                    url: '/search_jobs',
+                    type: 'GET',
+                    data: { job_title: jobTitle },
+                    success: function(response) {
+                        var jobSuggestions = $('#jobSuggestions');
+                        jobSuggestions.empty();
+                        if (response.jobs && response.jobs.length > 0) {
+                            response.jobs.forEach(function(job) {
+                                jobSuggestions.append('<li>' + job + '</li>');
+                            });
+                        } else {
+                            jobSuggestions.append('<li>No jobs found</li>');
+                        }
+                    },
+                    error: function() {
+                        alert('Error fetching job suggestions. Please try again.');
+                    }
+                });
+            }
+        });
+    
+        // Handle job selection and fetch skills
+        $(document).on('click', '#jobSuggestions li', function() {
+            var selectedJob = $(this).text();
+            $('#jobTitleInput').val(selectedJob);
+            $('#jobSuggestions').empty();
+    
+            $.ajax({
+                url: '/get_job_skills',
+                type: 'GET',
+                data: { job_title: selectedJob },
+                success: function(response) {
+                    var skillsList = $('#skillsList');
+                    skillsList.empty();
+                    if (response.skills && response.skills.length > 0) {
+                        response.skills.forEach(function(skill) {
+                            skillsList.append('<li><input type="checkbox" name="skills" value="' + skill + '" checked> ' + skill + '</li>');
+                        });
+                    } else {
+                        skillsList.append('<li>No skills found for this job</li>');
+                    }
+                },
+                error: function() {
+                    alert('Error fetching job skills.');
+                }
+            });
+        });
+    
+        // Handle CV upload form submission
+        $('#cvUploadForm').on('submit', function(event) {
+            event.preventDefault();
+            var formData = new FormData(this);
+    
+            $.ajax({
+                url: '/upload_cv',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    if (response.error) {
+                        alert(response.error);
+                        return;
+                    }
+                    $('#email').val(response.contact_info.email);
+                    $('#phone').val(response.contact_info.phone);
+                    $('#skillsList').empty();
+                    response.skills.forEach(function(skill) {
+                        $('#skillsList').append('<li><input type="checkbox" name="skills" value="' + skill + '" checked> ' + skill + '</li>');
+                    });
+                    $('#cv_text').val(response.cv_text);
+                    $('#pdfViewer').attr('src', response.pdf_url);
+                    $('#skillsSection').show();
+                    $('#cvUploadForm').hide();
+                },
+                error: function() {
+                    alert('Error uploading CV. Please try again.');
+                }
+            });
+        });
+    });
+    </script>
+    
+
+<!-- New Section to act as the empty page (hidden initially) -->
+<div id="emptyPageSection" style="display: none;">
+    <h1>Play-To-Earn Games</h1>
+    <p>Below are all the games that you can play. The locked icons are games you do not qualify to play yet.</p>
+    <div id="gamesContainer" style="display: flex; flex-wrap: wrap;">
+        <!-- Games will be dynamically inserted here -->
+    </div>
+</div>
+
+<!-- Game Details Section (Hidden initially) -->
+<div id="gameDetailSection" style="display:none;">
+    <h2 id="gameName"></h2>
+    <img id="gameImage" src="" alt="Game Image" style="width:200px;"><br>
+    <p id="gameDescription"></p>
+    <p><strong>Required Skills:</strong> <span id="gameSkills"></span></p>
+    <p><strong>Skills you have:</strong> <span id="gameMatchedSkills"></span></p>
+    <p><strong>Skills you're missing:</strong> <span id="gameMissingSkills"></span></p>
+    <button id="backToGames">Back to Games</button>
+</div>
+
+<script>
+
+/*
+    // Handle purpose form submission
+    $('#purposeForm').on('submit', function(event) {
+        event.preventDefault();
+
+        // Show CV upload form and hide purpose section
+        $('#cvUploadForm').show();  
+        $('#purposeSection').hide();
+
+        // Also show the job title section depending on purpose
+        $('#jobTitleSection').show();  
+    });
+*/
+    // Show CV upload form and job title section by default
+    $('#cvUploadForm').show();  
+    $('#jobTitleSection').show();  
+
+    // Hide the purpose section (if it's still in the code or temporarily commented out)
+    $('#purposeSection').hide();
+
+
+
+    $('#jobTitleInput').on('input', function() {
+    var jobTitle = $(this).val();
+    if (jobTitle.length > 2) {  // Start fetching suggestions after 3 characters
+        $.ajax({
+            url: '/search_jobs',
+            type: 'GET',
+            data: {job_title: jobTitle},
+            success: function(response) {
+                var jobSuggestions = $('#jobSuggestions');
+                jobSuggestions.empty();
+                if (response.jobs && response.jobs.length > 0) {
+                    response.jobs.forEach(function(job) {
+                        jobSuggestions.append('<li>' + job + '</li>');
+                    });
+                } else {
+                    jobSuggestions.append('<li>No jobs found</li>');  // Handle case where no jobs are found
+                }
+                console.log("Job suggestions:", response);  // Debugging print
+            },
+            error: function() {
+                alert('Error fetching job suggestions. Please try again.');
+                console.error("Error fetching job suggestions");  // Debugging print
+            }
+        });
+    }
+});
+
+
+// Handle job selection and fetch skills
+$(document).on('click', '#jobSuggestions li', function() {
+    var selectedJob = $(this).text();
+    $('#jobTitleInput').val(selectedJob);
+    $('#jobSuggestions').empty();
+
+    // Fetch skills for the selected job
+    $.ajax({
+        url: '/get_job_skills',
+        type: 'GET',
+        data: {job_title: selectedJob},
+        success: function(response) {
+            var skillsList = $('#skillsList');
+            skillsList.empty();
+            if (response.skills && response.skills.length > 0) {
+                response.skills.forEach(function(skill) {
+                    skillsList.append('<li><input type="checkbox" name="skills" value="' + skill + '" checked> ' + skill + '</li>');
+                });
+            } else {
+                skillsList.append('<li>No skills found for this job</li>');
+            }
+            console.log("Job skills fetched:", response);  // Debugging print
+        },
+        error: function() {
+            alert('Error fetching job skills.');
+            console.error("Error fetching job skills");  // Debugging print
+        }
+    });
+});
+
+
+    // Handle CV upload form submission
+    $('#cvUploadForm').on('submit', function(event) {
+        event.preventDefault();
+        var formData = new FormData(this);
+        
+        $.ajax({
+            url: '/upload_cv',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                console.log(response);  // Add this to check the response object
+                if (response.error) {
+                    alert(response.error);
+                    return;
+                }
+                $('#email').val(response.contact_info.email);
+                $('#phone').val(response.contact_info.phone);
+
+                $('#skillsList').empty();
+                response.skills.forEach(function(skill) {
+                    $('#skillsList').append('<li><input type="checkbox" name="skills" value="' + skill + '" checked> ' + skill + '</li>');
+                });
+
+                $('#cv_text').val(response.cv_text);
+                $('#pdfViewer').attr('src', response.pdf_url);
+
+                $('#skillsSection').show();
+                $('#cvUploadForm').hide();
+            },
+            error: function() {
+                alert('Error uploading CV. Please try again.');
+            }
+        });
+    });
+
+    // Handle skills form submission
+    $('#skillsForm').on('submit', function(event) {
+        event.preventDefault();
+        var contactInfoData = $('#contactInfoForm').serialize();
+        var skillsData = $(this).serialize();
+        var allData = contactInfoData + '&' + skillsData;
+
+        $.ajax({
+            url: '/process_skills',
+            type: 'POST',
+            data: allData,
+            success: function() {
+                alert('Your CV, skills, and experience have been saved!');
+                $('#skillsSection').hide();  
+                $('#emptyPageSection').show();  
+                loadGames();
+            },
+            error: function() {
+                alert('Error saving skills and experience. Please try again.');
+            }
+        });
+    });
+
+    function loadGames() {
+        $.ajax({
+            url: '/games',
+            type: 'GET',
+            success: function(response) {
+                console.log(response);  // Add this to check the response object
+                const games = response.games;
+                const userSkills = response.user_skills.map(skill => skill.toLowerCase());
+
+                // Ensure the games container is cleared before rendering
+                $('#gamesContainer').empty();
+
+                games.forEach(function(game) {
+                    const gameBox = document.createElement('div');
+                    gameBox.style.margin = '20px';
+                    gameBox.style.border = '1px solid black';
+                    gameBox.style.padding = '10px';
+                    gameBox.style.width = '150px';
+                    gameBox.classList.add('game-box'); 
+
+                    const gameImg = document.createElement('img');
+                    gameImg.src = game.image;
+                    gameImg.alt = game.name;
+                    gameImg.style.width = '100%';
+
+                    const gameTitle = document.createElement('h3');
+                    gameTitle.innerText = game.name;
+
+                    const gameStatus = document.createElement('p');
+                    gameStatus.innerText = game.status;
+
+                    gameBox.appendChild(gameImg);
+                    gameBox.appendChild(gameTitle);
+                    gameBox.appendChild(gameStatus);
+
+                    gameBox.addEventListener('click', function() {
+                        console.log("Loading details for:", game.name);  // Debugging to check if the function is triggered
+                        loadGameDetails(game.name);
+                    });
+
+                    document.getElementById('gamesContainer').appendChild(gameBox);
+                });
+            },
+            error: function() {
+                alert('Error loading games. Please try again.');
+            }
+        });
+    }
+
+    function loadGameDetails(gameName) {
+        $.ajax({
+            url: `/game/${gameName}`,
+            type: 'GET',
+            success: function(response) {
+                console.log(response);  // Add this to check the response object
+                if (response.error) {
+                    alert(response.error);
+                    return;
+                }
+
+                $('#gameName').text(gameName);  // Sets the name of the game
+                $('#gameDescription').text(response.description);  // Sets the description of the game
+                $('#gameSkills').text(response.skills_required.join(', '));  // Displays the required skills for the game
+                $('#gameImage').attr('src', response.image);  // Displays the image for the game
+
+                // Show the matched skills
+                const matchedSkills = response.matched_skills.length ? response.matched_skills.join(', ') : "None";
+                const missingSkills = response.missing_skills.length ? response.missing_skills.join(', ') : "None";
+
+                $('#gameMatchedSkills').text("Skills you have: " + matchedSkills);  // Display matched skills
+                $('#gameMissingSkills').text("Skills you're missing: " + missingSkills);  // Display missing skills
+
+                $('#emptyPageSection').hide();  // Hide the games list
+                $('#gameDetailSection').show();  // Show the selected game's details
+            },
+            error: function() {
+                alert('Error loading game details.');
+            }
+        });
+    }
+
+    $('#backToGames').on('click', function() {
+        $('#gameDetailSection').hide();  // Hide game details
+        $('#emptyPageSection').show();  // Show the games list again
+    });
+</script>
+</body>
+</html>
