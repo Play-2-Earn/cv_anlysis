@@ -144,7 +144,7 @@ def index():
     """
     Simple route to serve a minimal HTML form or instruction.
     """
-    return render_template('LSBUPhase2.html')  # We'll create JDMatching.html KEEP THIS AS LSBUPhase2.html CHECK THE "template" folder
+    return render_template('Phase2.html')  # KEEP THIS AS Phase2.html CHECK THE "template" folder
 
 
 if __name__ == "__main__":
