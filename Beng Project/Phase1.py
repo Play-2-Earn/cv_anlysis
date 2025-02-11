@@ -184,7 +184,7 @@ def calculate_skill_score(user_skills, game_skills):
 # Home route
 @app.route('/')
 def home():
-    return render_template('LSBUPhase1.html') #LSBUPhase1.html
+    return render_template('LSBUPhase1.html') #LSBUPhase1.html check the "template" folder it has to have the same name
 
 
 #-------------------------------------------------------------------------------orginal Upload CV method
