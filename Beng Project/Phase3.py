@@ -32,7 +32,7 @@ def extract_keywords(text):
 # Home Route
 @app.route('/')
 def home():
-    return render_template('LSBUPhase3.html')
+    return render_template('LSBUPhase3.html')    # Change this to "LSBUPhase3.html " you can find it in the template sub folder
 
 # Route for JD and CV analysis
 @app.route('/option3', methods=['GET', 'POST'])
